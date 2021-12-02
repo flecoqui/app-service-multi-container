@@ -1,0 +1,22 @@
+version: "3"
+services:
+  nginx:
+    container_name: nginx
+    image: {ContainerRegistryName}.azurecr.io/nginx:latest
+    ports:
+      - 80:80
+      - 443:443
+    depends_on:
+      - datashop-api
+      - company-api
+  datashop-api:
+    container_name: datashop-api
+    # Remove the build command for configuration file in azure web app service
+    image: {ContainerRegistryName}.azurecr.io/datashop-api:latest
+    ports:
+      - 8080:5000
+  company-api:
+    container_name: company-api
+    image: {ContainerRegistryName}.azurecr.io/company-api:latest
+    ports:
+      - 8181:5000

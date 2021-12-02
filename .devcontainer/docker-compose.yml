@@ -1,0 +1,20 @@
+version: '3.3'
+services:
+  dcworkspace:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    volumes:
+      - "..:/dcworkspace"
+      - "~/.gitignore:/home/dcuser/.gitignore"
+      - "~/.ssh:/home/dcuser/.ssh"
+      - "/var/run/docker.sock:/var/run/docker.sock"
+      - "tempvol:/tempvol"
+    ports:
+      - "8888:8888"
+    command: sleep infinity
+volumes:
+  tempvol:
+
+
+  
