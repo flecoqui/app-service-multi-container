@@ -1,6 +1,6 @@
 #!/bin/bash
 set -e
-export IMAGE_NAME="fastapi-rest-api"
+export IMAGE_NAME="flask-rest-api"
 
 result=$(docker images --filter=reference="${IMAGE_NAME}:*" -q | head -n 1)
 while [[ -n ${result} ]]

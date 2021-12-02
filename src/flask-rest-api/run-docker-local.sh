@@ -2,7 +2,7 @@
 set -e
 export PORT_HTTP=5000
 export APP_VERSION=$(date +"%y%M%d.%H%M%S")
-export IMAGE_NAME="fastapi-rest-api"
+export IMAGE_NAME="flask-rest-api"
 export IMAGE_TAG=${APP_VERSION}
 export ALTERNATIVE_TAG="latest"
 

@@ -4,7 +4,7 @@ black==21.5b2
 flake8==3.9.2
 isort==5.9.2
 requests
-Flask>=1,<2
+Flask==2.0.2
 flask-session==0.3.2
 uvicorn==0.14.0
 fastapi==0.65.1
