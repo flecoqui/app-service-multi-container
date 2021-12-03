@@ -11,12 +11,15 @@ services:
       - flask-rest-api
   fastapi-rest-api:
     container_name: fastapi-rest-api
-    # Remove the build command for configuration file in azure web app service
     image: fastapi-rest-api:latest
+    environment:
+      - APP_VERSION=${APP_VERSION}       
     ports:
       - 8000:5000
   flask-rest-api:
     container_name: flask-rest-api
     image: flask-rest-api:latest
+    environment:
+      - APP_VERSION=${APP_VERSION}    
     ports:
       - 7000:5000
