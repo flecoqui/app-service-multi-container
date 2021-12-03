@@ -7,155 +7,177 @@
 set -e
 # Read variables in configuration file
 parent_path=$(
-    cd "$(dirname "${BASH_SOURCE[0]}")/../../../"
+    cd "$(dirname "${BASH_SOURCE[0]}")/../"
     pwd -P
 )
-export "$(grep targetEnvironmentTfName "$parent_path""/configs/.env")"
-export "$(grep azSubscriptionName "$parent_path""/configs/.env")"
-export "$(grep rgDevOpsTfState "$parent_path""/configs/.env")"
-export "$(grep tfStorageAccountName "$parent_path""/configs/.env")"
-export "$(grep tfContainerName "$parent_path""/configs/.env")"
-export "$(grep managedIdentityClientId "$parent_path""/configs/.env")"
-export "$(grep azureTenant "$parent_path""/configs/.env")"
-export "$(grep azureSubscription "$parent_path""/configs/.env")"
-export "$(grep companyDatalakeName "$parent_path""/configs/.env")"
-export "$(grep companyDatalakeAccessKey "$parent_path""/configs/.env")"
-export "$(grep companyDatalakeContainerName "$parent_path""/configs/.env")"
-export "$(grep companyWebAppName "$parent_path""/configs/.env")"
-export "$(grep companyWebAppRG "$parent_path""/configs/.env")"
-export "$(grep commonContainerRegistryPwd "$parent_path""/configs/.env")"
-export "$(grep commonContainerRegistryUrl "$parent_path""/configs/.env")"
-export "$(grep commonContainerRegistryLogin "$parent_path""/configs/.env")"
-export "$(grep commonContainerRegistryName "$parent_path""/configs/.env")"
+source `dirname $0`/common.sh
 
-# Force sandbox env
-targetEnvironmentTfName=sandbox
-# expected environment variables; one can override them as arguments
-targetEnvironmentTfName=${1:-$targetEnvironmentTfName}
-azSubscriptionName=${2:-$azSubscriptionName}
-rgDevOpsTfState=${3:-$rgDevOpsTfState}
-tfStorageAccountName=${4:-$tfStorageAccountName}
-tfContainerName=${5:-$tfContainerName}
-managedIdentityClientId=${6:-$managedIdentityClientId}
+# container version (current date)
+export APP_VERSION=$(date +"%y%M%d.%H%M%S")
+# container internal HTTP port
+export APP_PORT=5000
+# webapp prefix 
+export AZURE_APP_PREFIX="testmcwa"
 
-echo "targetEnvironmentTfName=[$targetEnvironmentTfName]"
-echo "azSubscriptionName=[$azSubscriptionName]"
-echo "rgDevOpsTfState=[$rgDevOpsTfState]"
-echo "tfStorageAccountName=[$tfStorageAccountName]"
-echo "tfContainerName=[$tfContainerName]"
-echo "managedIdentityClientId=[$managedIdentityClientId]"
+env_path=$1
+if [[ -z $env_path ]]; then
+    env_path="$(dirname "${BASH_SOURCE[0]}")/../configuration/.default.env"
+fi
+
+printMessage "Starting test with local Docker service using the configuration in this file ${env_path}"
+
+if [[ $env_path ]]; then
+    if [ ! -f "$env_path" ]; then
+        printError "$env_path does not exist."
+        exit 1
+    fi
+    set -o allexport
+    source "$env_path"
+    set +o allexport
+else
+    printWarning "No env. file specified. Using environment variables."
+fi
 
 
-az account set -s "$azSubscriptionName"
+function deployAzureInfrastructure(){
+    subscription=$1
+    region=$2
+    prefix=$3
+    sku=$4
+    datadep=$(date +"%y%M%d-%H%M%S")
+    resourcegroup="${prefix}rg"
+    webapp="${prefix}webapp"
 
-pushd "$(dirname "${BASH_SOURCE[0]}")/../../../scripts" > /dev/null
-source "./init-vars.sh"
-source "./utils.sh"
-popd > /dev/null
+    cmd="az group create  --subscription $subscription --location $region --name $resourcegroup --output none "
+    printProgress "$cmd"
+    eval "$cmd"
 
-# Checks whether the process is logged in on Azure
-azLogin
+    checkError
+    cmd="az deployment group create \
+        --name $datadep \
+        --resource-group $resourcegroup \
+        --subscription $subscription \
+        --template-file ./arm-template.json \
+        --output table \
+        --parameters \
+        webAppName=$1 sku=$2"
+    printProgress "$cmd"
+    eval "$cmd"
+    checkError
 
-
+}
 function buildWebAppContainer() {
-        apiModule="$1"
-        imageName="$2"
-        imageTag="$3"
+    apiModule="$1"
+    imageName="$2"
+    imageTag="$3"
+    imageLatestTag="$4"
+    portHttp="$5"
 
-        if [ ! -d "$apiModule" ]; then
-                echo "Directory '$apiModule' does not exist."
-                exit 1
-        fi
+    targetDirectory="$(dirname "${BASH_SOURCE[0]}")/../$apiModule"
 
-        echo "Building and uploading the docker image for '$apiModule'"
+    if [ ! -d "$targetDirectory" ]; then
+            echo "Directory '$targetDirectory' does not exist."
+            exit 1
+    fi
 
-        # Navigate to API module folder
-        pushd "$(dirname "${BASH_SOURCE[0]}")/../../../$apiModule" > /dev/null
-        # Generate the wheel file
+    echo "Building and uploading the docker image for '$apiModule'"
 
-        make dist
+    # Navigate to API module folder
+    pushd "$targetDirectory" > /dev/null
 
-        # Build the image
-        echo "Building and uploading the docker image for '$imageName:$imageTag'"
-        az acr build --registry "$commonContainerRegistryName" --image "$imageName:$imageTag" .
-
-        popd > /dev/null
+    # Build the image
+    echo "Building the docker image for '$imageName:$imageTag'"
+    docker build -t ${imageName}:${imageTag} -f Dockerfile --build-arg APP_VERSION=${imageTag} --build-arg ARG_PORT_HTTP=${portHttp} .
+    # Push with alternative tag
+    docker tag ${imageName}:${imageTag} ${imageName}:${imageLatestTag}
+    
+    popd > /dev/null
 
 }
 
-# Checks wheather the process is logged in on Azure
+function clearImage(){
+    imageName="$1"
+    # stop the container
+    docker container stop "$1" 2>/dev/null || true
+    # remove the container
+    docker container rm "$1" 2>/dev/null || true
+    # remove the images
+    result=$(docker images --filter=reference="${imageName}:*" -q | head -n 1)
+    while [ -n "${result}" ]
+    do
+        docker rmi -f ${result}
+        result=$(docker images --filter=reference="${imageName}:*" -q | head -n 1)
+    done
+}
+
+
+# Check Azure connection
+printMessage "Deploy infrastructure subscription: '$AZURE_SUBSCRIPTION_ID' region: '$AZURE_REGION' prefix: '$AZURE_APP_PREFIX' sku: 'B2'"
 azLogin
+checkError
 
-# Build and upload DATASHOP API images on Azure Container Registry & create web app
-buildWebAppContainer "./src/nginx" "nginx" "latest" "$companyWebAppName" "$companyWebAppRG"
+# Deploy infrastructure image
+printMessage "Deploy infrastructure subscription: '$AZURE_SUBSCRIPTION_ID' region: '$AZURE_REGION' prefix: '$AZURE_APP_PREFIX' sku: 'B2'"
+deployAzureInfrastructure $AZURE_SUBSCRIPTION_ID $AZURE_REGION $AZURE_APP_PREFIX "B2"
 
-# Build and upload DATASHOP API images on Azure Container Registry & create web app
-buildWebAppContainer "./src/datashop-api" "datashop-api" "latest" "$companyWebAppName" "$companyWebAppRG"
+exit 1
 
-# Build and upload the COMPANY API images on Azure Container Registry & create web app
-buildWebAppContainer "./src/company-api" "company-api" "latest" "$companyWebAppName" "$companyWebAppRG"
+# Build nginx-api docker image
+printMessage "Building nginx-api container"
+clearImage "nginx-api"
+buildWebAppContainer "./src/nginx" "nginx-api" "${APP_VERSION}" "latest" 
+checkError
 
-echo "Delete Containers"
-az webapp config container delete --name "$companyWebAppName" --resource-group "$companyWebAppRG"
-echo "Create Containers"
-sed "s/{ContainerRegistryName}/$commonContainerRegistryName/g" < ./src/nginx/docker-compose.template.yml >  ./src/nginx/docker-compose.yml
-az webapp config container set --resource-group  "$companyWebAppRG" --name "$companyWebAppName" \
-        --multicontainer-config-type compose --multicontainer-config-file ./src/nginx/docker-compose.yml
+# Build fastapi-api docker image
+printMessage "Building fastapi-rest-api container version:${APP_VERSION} port: ${APP_PORT}"
+clearImage "fastapi-rest-api"
+buildWebAppContainer "./src/fastapi-rest-api" "fastapi-rest-api" "${APP_VERSION}" "latest" ${APP_PORT}
+checkError
 
-echo "Create Config"
-az webapp config appsettings set -g "$companyWebAppRG" -n "$companyWebAppName" \
- --settings DOCKER_REGISTRY_SERVER_URL="$commonContainerRegistryUrl" \
-  DOCKER_REGISTRY_SERVER_USERNAME="$commonContainerRegistryLogin" \
-  DOCKER_REGISTRY_SERVER_PASSWORD="$commonContainerRegistryPwd"
+# Build flask-api docker image
+printMessage "Building flask-rest-api container version:${APP_VERSION} port: ${APP_PORT}"
+clearImage "flask-rest-api"
+buildWebAppContainer "./src/flask-rest-api" "flask-rest-api" "${APP_VERSION}" "latest" ${APP_PORT}
+checkError
 
-echo "Restart WebApp"
-az webapp restart --name "$companyWebAppName" --resource-group "$companyWebAppRG"
+# Deploy nginx, fastapi-rest-api, flask-rest-api
+printMessage "Deploying all the containers"
+targetDirectory="$(dirname "${BASH_SOURCE[0]}")/../src/nginx"
+pushd "$targetDirectory" > /dev/null
+docker-compose up  -d
+checkError
+popd > /dev/null
 
-# Upload sample data files to the datalake
-# Data sample is split into multiple files to "mockup" big data transfer
-az storage blob upload-batch --destination "$companyDatalakeContainerName" \
-    --account-name "$companyDatalakeName" \
-    --account-key "$companyDatalakeAccessKey" \
-    --source "$(dirname "${BASH_SOURCE[0]}")/../../../test-data/integ-tests"
-
-# Test datashop/datasets endpoint on DATASHOP API, ensure it sends back a payload with datasets in it
-datashopApiUrl="https://$companyWebAppName.azurewebsites.net/datashop/datasets"
-waitForUrl "$datashopApiUrl"
-
-response=$(curl -X GET -s "$datashopApiUrl" | jq -r '.items' | jq length)
-
-if [[ $response = 0 ]]; then
-     # If payload is invalid, or does not contain any items, quit with error
-     echo "Error: The endpoint 'datashop/datasets' did not return the correct json payload."
-     exit 1
+# Test services
+# Test flask-rest-api
+# get nginx local ip address
+# connect to container network if in dev container
+ip=$(get_local_host "nginx-api")
+flask_rest_api_url="http://$ip/flask-rest-api/version"
+printMessage "Testing flask-rest-api url: $flask_rest_api_url expected version: ${APP_VERSION}"
+result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" "60")
+if [[ $result != "true" ]]; then
+    printError "Error while testing flask-rest-api"
+else
+    printMessage "Testing flask-rest-api successful"
 fi
 
-# Test /datasets/[id]/status endpoint, ensure status==ready (so the blob 'exists')
-companyUrl="https://$companyWebAppName.azurewebsites.net/datasets/123/status"
-waitForUrl "$companyUrl"
-
-response=$(curl -X GET -s "$companyUrl" | jq -r '.status')
-
-if [[ $response = "null" ]]; then
-     echo "Error: The endpoint '/datasets/[id]/status' did not return the correct json payload."
-     exit 1
+# Test flask-rest-api
+fastapi_rest_api_url="http://$ip/fastapi-rest-api/version"
+printMessage "Testing fastapi-rest-api url: $fastapi_rest_api_url expected version: ${APP_VERSION}"
+result=$(checkUrl "${fastapi_rest_api_url}" "${APP_VERSION}" "60")
+if [[ $result != "true" ]]; then
+    printError "Error while testing fastapi-rest-api"
+else
+    printMessage "Testing fastapi-rest-api successful"
 fi
 
-if [[ $response != "ready" ]]; then
-    echo "Error: The file is not present in the datalake."
-    exit 1
-fi
-
-# Ensure now that the blob exists on the DataLake (that the process has completely pushed the bought dataset)
-blobName="div_1_features_1.csv"
-blobExists=$(az storage blob exists --container-name "$companyDatalakeContainerName" \
-    --name "$blobName" \
-    --account-name "$companyDatalakeName" \
-    --account-key "$companyDatalakeAccessKey" | jq -r '.exists')
-
-if [[ $blobExists != "true" ]]; then
-    echo "The blob '$blobName' does not exist in the datalake '$companyDatalakeName'."
-    exit 1
-fi
+# Undeploy nginx, fastapi-rest-api, flask-rest-api
+printMessage "Undeploying all the containers"
+targetDirectory="$(dirname "${BASH_SOURCE[0]}")/../src/nginx"
+pushd "$targetDirectory" > /dev/null
+docker-compose down 
+checkError
+popd
 
 echo "done."

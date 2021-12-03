@@ -47,14 +47,14 @@ function azLogin() {
     # Check if current process's user is logged on Azure
     # If no, then triggers az login
     azOk=true
-    az account set -s "$azureSubscription"  || azOk=false
+    az account set -s "$AZURE_SUBSCRIPTION_ID"  || azOk=false
     if [[ ${azOk} == false ]]; then
         echo -e "need to az login"
-        az login --tenant "$azureTenant"
+        az login --tenant "$AZURE_TENANT_ID"
     fi
 
     azOk=true
-    az account set -s "$azureSubscription"  || azOk=false
+    az account set -s "$AZURE_SUBSCRIPTION_ID"  || azOk=false
     if [[ ${azOk} == false ]]; then
         echo -e "unknown error"
         exit 1
