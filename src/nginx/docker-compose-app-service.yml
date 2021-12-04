@@ -14,13 +14,13 @@ services:
     # Remove the build command for configuration file in azure web app service
     image: acrtestmcwawebapp.azurecr.io/fastapi-rest-api:latest
     environment:
-      - APP_VERSION=211304.221330      
+      - APP_VERSION=211204.225636      
     ports:
       - 8080:5000
   flask-rest-api:
     container_name: flask-rest-api
     image: acrtestmcwawebapp.azurecr.io/flask-rest-api:latest
     environment:
-      - APP_VERSION=211304.221330      
+      - APP_VERSION=211204.225636      
     ports:
       - 8181:5000

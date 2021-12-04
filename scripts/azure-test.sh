@@ -14,7 +14,7 @@ SCRIPTS_DIRECTORY=`dirname $0`
 source "$SCRIPTS_DIRECTORY"/common.sh
 
 # container version (current date)
-export APP_VERSION=$(date +"%y%M%d.%H%M%S")
+export APP_VERSION=$(date +"%y%m%d.%H%M%S")
 # container internal HTTP port
 export APP_PORT=5000
 # webapp prefix 
@@ -89,7 +89,7 @@ function undeployAzureInfrastructure(){
     prefix=$2
     resourcegroup="${prefix}rg"
 
-    cmd="az group delete  --subscription $subscription  --name $resourcegroup --output none "
+    cmd="az group delete  --subscription $subscription  --name $resourcegroup -y --output none "
     printProgress "$cmd"
     eval "$cmd"
 }
@@ -197,7 +197,6 @@ deployMultiContainer "$AZURE_APP_PREFIX" "${ACR_LOGIN_SERVER}" "${ACR_LOGIN}" "$
 # Test flask-rest-api
 # get nginx local ip address
 # connect to container network if in dev container
-ip=$(get_local_host "nginx-api")
 flask_rest_api_url="https://${WEB_APP_SERVER}/flask-rest-api/version"
 printMessage "Testing flask-rest-api url: $flask_rest_api_url expected version: ${APP_VERSION}"
 result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" "60")
@@ -217,7 +216,6 @@ else
     printMessage "Testing fastapi-rest-api successful"
 fi
 
-exit 1
 # Undeploy Azure resource 
 printMessage "Undeploying all the Azure resources"
 undeployAzureInfrastructure $AZURE_SUBSCRIPTION_ID $AZURE_APP_PREFIX
