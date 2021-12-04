@@ -1,4 +1,4 @@
-FROM ubuntu:20.04 
+FROM ubuntu:20.10 
 
 ARG USERNAME=dcuser
 ARG USER_UID=1000
@@ -8,24 +8,23 @@ ARG USER_GID=$USER_UID
 RUN groupadd --gid $USER_GID $USERNAME \
     && useradd --uid $USER_UID --gid $USER_GID -m $USERNAME
 
-RUN apt-get update \
-    && apt-get install -y gnupg software-properties-common ffmpeg wget jq 
-
-# apt stuff
+# Update packages list & install missing packages
 RUN apt-get update \
     && export DEBIAN_FRONTEND=noninteractive \
     # install missing packages
     && mkdir -p /usr/share/man/man1 \
-    && apt-get install -y sudo git curl make procps lsb-release vim jq\
-    # add sudo support
-    && echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
-    && chmod 0440 /etc/sudoers.d/$USERNAME \
-    # install azure-cli
-    && curl -sL https://aka.ms/InstallAzureCLIDeb  | bash 
+    && apt-get install -y sudo git curl make procps lsb-release vim jq python3-pip unzip gnupg software-properties-common wget jq dos2unix 
+    
+# Finish setting up $USERNAME (sudo, no password etc ...)
+RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
+    && chmod 0440 /etc/sudoers.d/$USERNAME  
 
-# install python3 and pip3
-RUN apt-get update \
-    && apt-get install -y python3-pip 
+# Install missing packages out of apt-get
+COPY tools-install.sh /home/$USERNAME/
+RUN dos2unix ./home/$USERNAME/tools-install.sh && ./home/$USERNAME/tools-install.sh
+
+# Python things: update pip, install az-cli
+RUN python3 -m pip install pip --upgrade
 
 # Install required librairies
 COPY ./requirements.txt /home/$USERNAME/
@@ -51,15 +50,14 @@ RUN apt-get update \
     lsb-release \
     dnsutils
 RUN curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg
-
 RUN echo \
   "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu \
   $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
 RUN  apt-get update \
       && apt-get install -y docker-ce-cli
 
+# Install Docker-compose
 RUN curl -L "https://github.com/docker/compose/releases/download/1.29.2/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
-
 RUN chmod +x /usr/local/bin/docker-compose
 
 # now everything from here uses the normal user

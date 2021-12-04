@@ -26,14 +26,14 @@
     }
   },
   "variables": {
-    "appServicePlanPortalName": "[concat('AppServicePlan-', parameters('webAppName'))]",
+    "appServicePlanName": "[concat('AppServicePlan-', parameters('webAppName'))]",
     "containerRegistryName": "[concat('acr', parameters('webAppName'))]"
   },
   "resources": [
     {
       "type": "Microsoft.Web/serverfarms",
       "apiVersion": "2020-06-01",
-      "name": "[variables('appServicePlanPortalName')]",
+      "name": "[variables('appServicePlanName')]",
       "location": "[parameters('location')]",
       "sku": {
         "name": "[parameters('sku')]"
@@ -50,32 +50,32 @@
       "location": "[parameters('location')]",
       "kind": "app,linux,container",
       "dependsOn": [
-        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanPortalName'))]"
+        "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
       ],
       "properties": {
-        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanPortalName'))]",
+        "serverFarmId": "[resourceId('Microsoft.Web/serverfarms', variables('appServicePlanName'))]"
       }
     },
     {
-        "type": "Microsoft.ContainerRegistry/registries",
-        "apiVersion": "2017-10-01",
-        "name": "[variables('containerRegistryName')]",
-        "location": "[resourceGroup().location]",
-        "sku": {
-          "name": "Standard",
-          "tier": "Standard"
-        },
-        "properties": {
-          "adminUserEnabled": false
-        }
+      "type": "Microsoft.ContainerRegistry/registries",
+      "apiVersion": "2017-10-01",
+      "name": "[variables('containerRegistryName')]",
+      "location": "[resourceGroup().location]",
+      "sku": {
+        "name": "Standard",
+        "tier": "Standard"
+      },
+      "properties": {
+        "adminUserEnabled": false
       }
+    }
   ],
   "outputs": {
-    "ACRLoginServer": {
+    "acrLoginServer": {
       "type": "string",
       "value": "[reference(resourceId('Microsoft.ContainerRegistry/registries',variables('containerRegistryName')),'2017-10-01').loginServer]"
     },    
-    "WebAppServer": {
+    "webAppServer": {
       "type": "string",
       "value": "[concat('https://',parameters('webAppName'),'.azurewebsites.net/')]"
     }

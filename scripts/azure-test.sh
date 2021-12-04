@@ -57,15 +57,19 @@ function deployAzureInfrastructure(){
         --name $datadep \
         --resource-group $resourcegroup \
         --subscription $subscription \
-        --template-file ./arm-template.json \
-        --output table \
+        --template-file `dirname $0`/arm-template.json \
+        --output non \
         --parameters \
-        webAppName=$1 sku=$2"
+        webAppName=$webapp sku=$sku"
     printProgress "$cmd"
     eval "$cmd"
     checkError
-
+    # get ACR login server dns name
+    ARC_LOGIN_SERVER=$(az deployment group show --resource-group $resourcegroup -n $datadep | jq -r '.properties.outputs.acrLoginServer.value')
+    # get WebApp Url
+    WEB_APP_SERVER=$(az deployment group show --resource-group $resourcegroup -n $datadep | jq -r '.properties.outputs.webAppServer.value')
 }
+
 function buildWebAppContainer() {
     apiModule="$1"
     imageName="$2"
@@ -112,13 +116,15 @@ function clearImage(){
 
 
 # Check Azure connection
-printMessage "Deploy infrastructure subscription: '$AZURE_SUBSCRIPTION_ID' region: '$AZURE_REGION' prefix: '$AZURE_APP_PREFIX' sku: 'B2'"
+printMessage "Check Azure connection for subscription: '$AZURE_SUBSCRIPTION_ID'"
 azLogin
 checkError
 
 # Deploy infrastructure image
 printMessage "Deploy infrastructure subscription: '$AZURE_SUBSCRIPTION_ID' region: '$AZURE_REGION' prefix: '$AZURE_APP_PREFIX' sku: 'B2'"
 deployAzureInfrastructure $AZURE_SUBSCRIPTION_ID $AZURE_REGION $AZURE_APP_PREFIX "B2"
+printMessage "Azure Container Registry DNS name: ${ARC_LOGIN_SERVER}"
+printMessage "Azure Web App Url: ${WEB_APP_SERVER}"
 
 exit 1
 
