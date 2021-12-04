@@ -77,7 +77,11 @@
     },    
     "webAppServer": {
       "type": "string",
-      "value": "[concat('https://',parameters('webAppName'),'.azurewebsites.net/')]"
-    }
+      "value": "[concat(parameters('webAppName'),'.azurewebsites.net')]"
+    },
+    "acrName": {
+      "type": "string",
+      "value": "[variables('containerRegistryName')]"
+    }        
   }
 }
