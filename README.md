@@ -434,30 +434,30 @@ Then it deploy all the containers using the following docker-compose template fi
 
 Moreover, the file ./src/nginx/nginx.conf defines the different location for each REST API.
 
-All the http requests to an url starting with http://{appservicename}.azurewebsites.net/fastapi-rest-api/ will be forwarded to fastapi container.
-All the http requests to an url starting with http://{appservicename}.azurewebsites.net/flask-rest-api/ will be forwarded to flask container.
+All the http requests to an url starting with http://{appservicename}.azurewebsites.net/fastapi-rest-api/ will be forwarded to fastapi container.  
 
-```json
+All the http requests to an url starting with http://{appservicename}.azurewebsites.net/flask-rest-api/ will be forwarded to flask container.  
 
-        events {
-            worker_connections 1024;
-        }
-        http {
-            server {
-                listen 80;
-                listen 443;
-                server_name _;
 
-                location /fastapi-rest-api/ {
-                    proxy_pass http://fastapi-rest-api:5000/;
-                }
+```
+    events {
+        worker_connections 1024;
+    }
+    http {
+        server {
+            listen 80;
+            listen 443;
+            server_name _;
 
-                location /flask-rest-api/ {
-                    proxy_pass http://flask-rest-api:5000/;
-                }
+            location /fastapi-rest-api/ {
+                proxy_pass http://fastapi-rest-api:5000/;
+            }
+
+            location /flask-rest-api/ {
+                proxy_pass http://flask-rest-api:5000/;
             }
         }
-
+    }
 ```
 
 
