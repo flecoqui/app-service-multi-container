@@ -438,24 +438,26 @@ All the http requests to an url starting with http://{appservicename}.azurewebsi
 All the http requests to an url starting with http://{appservicename}.azurewebsites.net/flask-rest-api/ will be forwarded to flask container.
 
 ```json
-    events {
-        worker_connections 1024;
-    }
-    http {
-        server {
-            listen 80;
-            listen 443;
-            server_name _;
 
-            location /fastapi-rest-api/ {
-                proxy_pass http://fastapi-rest-api:5000/;
-            }
+        events {
+            worker_connections 1024;
+        }
+        http {
+            server {
+                listen 80;
+                listen 443;
+                server_name _;
 
-            location /flask-rest-api/ {
-                proxy_pass http://flask-rest-api:5000/;
+                location /fastapi-rest-api/ {
+                    proxy_pass http://fastapi-rest-api:5000/;
+                }
+
+                location /flask-rest-api/ {
+                    proxy_pass http://flask-rest-api:5000/;
+                }
             }
         }
-    }
+
 ```
 
 
