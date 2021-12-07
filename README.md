@@ -434,12 +434,10 @@ Then it deploy all the containers using the following docker-compose template fi
 
 Moreover, the file ./src/nginx/nginx.conf defines the different location for each REST API.
 
-All the http requests to an url starting with http://{appservicename}.azurewebsites.net/fastapi-rest-api/ will be forwarded to fastapi container.  
+All the http requests to an url starting with http://{appservicename}.azurewebsites.net/fastapi-rest-api/ will be forwarded to fastapi container.
+All the http requests to an url starting with http://{appservicename}.azurewebsites.net/flask-rest-api/ will be forwarded to flask container.
 
-All the http requests to an url starting with http://{appservicename}.azurewebsites.net/flask-rest-api/ will be forwarded to flask container.  
-
-
-```
+```json
     events {
         worker_connections 1024;
     }
@@ -515,10 +513,10 @@ Once all the containers are deployed, we can test if the REST API are responding
 
 The bash file will test the following urls:
 
-- https://${WEB_APP_SERVER}/flask-rest-api/version
-- https://${WEB_APP_SERVER}/fastapi-rest-api/version
+- https://{WEB_APP_SERVER}/flask-rest-api/version
+- https://{WEB_APP_SERVER}/fastapi-rest-api/version
 
-where ${WEB_APP_SERVER} is the Azure App Service DNS name.
+where {WEB_APP_SERVER} is the Azure App Service DNS name.
 Moreover, the bash file will test if the version returned is the expected version.
 
 If the tests are sucessfull, the infrastructure is undeployed.
