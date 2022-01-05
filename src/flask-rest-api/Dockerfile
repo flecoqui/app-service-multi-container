@@ -25,6 +25,9 @@ COPY ./src/app.py /app
 COPY ./src/main.py /app
 COPY ./entrypoint.sh /app
 COPY ./requirements.txt ./
+
+RUN chmod +x /app/entrypoint.sh
+
 # install Flask
 RUN pip install -r requirements.txt
 RUN python -m pip install packages/*.whl

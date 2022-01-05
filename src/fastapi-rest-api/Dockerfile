@@ -24,6 +24,7 @@ COPY --from=build-image ./src/dist/*.whl /app/packages/
 COPY ./src/app.py /app
 COPY ./src/main.py /app
 COPY ./entrypoint.sh /app
+RUN chmod +x ./entrypoint.sh
 
 RUN python -m pip install packages/*.whl
 EXPOSE $PORT_HTTP/tcp

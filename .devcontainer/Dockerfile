@@ -21,6 +21,7 @@ RUN echo $USERNAME ALL=\(root\) NOPASSWD:ALL > /etc/sudoers.d/$USERNAME \
 
 # Install missing packages out of apt-get
 COPY tools-install.sh /home/$USERNAME/
+RUN chmod +x ./home/$USERNAME/tools-install.sh
 RUN dos2unix ./home/$USERNAME/tools-install.sh && ./home/$USERNAME/tools-install.sh
 
 # Python things: update pip, install az-cli
@@ -30,7 +31,7 @@ RUN python3 -m pip install pip --upgrade
 COPY ./requirements.txt /home/$USERNAME/
 RUN pip install -r /home/$USERNAME/requirements.txt
 
-# install .Net 5.0 SDK
+# install .Net 6.0 SDK
 RUN wget https://packages.microsoft.com/config/ubuntu/20.04/packages-microsoft-prod.deb -O packages-microsoft-prod.deb
 RUN dpkg -i packages-microsoft-prod.deb
 RUN apt-get update \

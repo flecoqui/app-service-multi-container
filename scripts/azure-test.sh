@@ -2,7 +2,6 @@
 #
 # executable
 #
-# apply Terraform template to deploy cosmos and app service
 
 set -e
 # Read variables in configuration file
@@ -119,10 +118,8 @@ function buildWebAppContainer() {
     cmd="az acr build --registry $ContainerRegistryName --image ${imageName}:${imageTag} --image ${imageName}:${imageLatestTag} -f Dockerfile --build-arg APP_VERSION=${imageTag} --build-arg ARG_PORT_HTTP=${portHttp} . --output none"
     printProgress "$cmd"
     eval "$cmd"
-
     
     popd > /dev/null
-
 }
 
 function deployMultiContainer(){
@@ -139,9 +136,10 @@ function deployMultiContainer(){
     eval "$cmd"
 
     printProgress "Create Containers"
-    sed "s/{ContainerRegistryUrl}/${ContainerRegistryUrl}\//g"  < $SCRIPTS_DIRECTORY/../src/nginx/docker-compose.template.yml | sed "s/{APP_VERSION}/${APP_VERSION}/g" >  $SCRIPTS_DIRECTORY/../src/nginx/docker-compose-app-service.yml
+    tmp_dir=$(mktemp -d -t mc-XXXXXXXXXX)
+    sed "s/{ContainerRegistryUrl}/${ContainerRegistryUrl}\//g"  < $SCRIPTS_DIRECTORY/../src/nginx/docker-compose.template.yml | sed "s/{APP_VERSION}/${APP_VERSION}/g" >  $tmp_dir/docker-compose-app-service.yml
     cmd="az webapp config container set --resource-group  "$resourcegroup" --name "$webapp" \
-            --multicontainer-config-type compose --multicontainer-config-file $SCRIPTS_DIRECTORY/../src/nginx/docker-compose-app-service.yml --output none"
+            --multicontainer-config-type compose --multicontainer-config-file $tmp_dir/docker-compose-app-service.yml --output none"
     printProgress "$cmd"
     eval "$cmd"
 
@@ -199,7 +197,7 @@ deployMultiContainer "$AZURE_APP_PREFIX" "${ACR_LOGIN_SERVER}" "${ACR_LOGIN}" "$
 # connect to container network if in dev container
 flask_rest_api_url="https://${WEB_APP_SERVER}/flask-rest-api/version"
 printMessage "Testing flask-rest-api url: $flask_rest_api_url expected version: ${APP_VERSION}"
-result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" "60")
+result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" 420)
 if [[ $result != "true" ]]; then
     printError "Error while testing flask-rest-api"
 else
@@ -209,7 +207,7 @@ fi
 # Test flask-rest-api
 fastapi_rest_api_url="https://${WEB_APP_SERVER}/fastapi-rest-api/version"
 printMessage "Testing fastapi-rest-api url: $fastapi_rest_api_url expected version: ${APP_VERSION}"
-result=$(checkUrl "${fastapi_rest_api_url}" "${APP_VERSION}" "60")
+result=$(checkUrl "${fastapi_rest_api_url}" "${APP_VERSION}" 420)
 if [[ $result != "true" ]]; then
     printError "Error while testing fastapi-rest-api"
 else

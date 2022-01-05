@@ -70,33 +70,34 @@ function checkUrl() {
     timeOut="$3"
     response=""
     count=0
-    while [[ $httpCode != "200" && $count < ${timeOut} && $response != $expectedResponse ]]
+    while [[ "$httpCode" != "200" ]] || [[ "$response" != "$expectedResponse" ]] && [[ $count -lt ${timeOut} ]]
     do
-        sleep 10
-        count=$count+10
-        httpCode=$(curl -s -o /dev/null -L -w '%{http_code}' "$apiUrl")
+        SECONDS=0
+        httpCode=$(curl -s -o /dev/null -L -w '%{http_code}' "$apiUrl") || true
         if [[ $httpCode == "200" ]]; then
-            response=$(curl -s  "$apiUrl")
+            response=$(curl -s  "$apiUrl") || true
             response=${response//\"/}
         fi
+        #echo "count=${count} code: ${httpCode} response: ${response} "
+        sleep 10
+        ((count=count+SECONDS))
     done
-    if [[ $httpCode == "200" && "${response}" == "${expectedResponse}" ]]; then
+    if [ $httpCode == "200" ] && [ "${response}" == "${expectedResponse}" ]; then
         echo "true"
         return
     fi
     echo "false"
     return
 }
-
 ##############################################################################
 #- get localhost
 ##############################################################################
 function get_local_host() {
 CONTAINER_NAME="$1"
 DEV_CONTAINER_ROOT="/dcworkspace"
-DEV_CONTAINER_NETWORK="app-service-multi-container_devcontainer_default"
+DEV_CONTAINER_NETWORK=$(docker inspect $(hostname) | jq -r '.[0].HostConfig.NetworkMode')
 FULL_PATH=$(cd $(dirname ""); pwd -P /$(basename ""))
-    if [[ $FULL_PATH =~ ^$DEV_CONTAINER_ROOT.* ]]; then
+    if [[ $FULL_PATH =~ ^$DEV_CONTAINER_ROOT.* ]] && [[ -n $DEV_CONTAINER_NETWORK ]]; then
         # running in dev container
         # connect devcontainer network to container
         if [[ $(docker container inspect "${CONTAINER_NAME}" | jq -r ".[].NetworkSettings.Networks.\"$DEV_CONTAINER_NETWORK\"") == null ]]; then 

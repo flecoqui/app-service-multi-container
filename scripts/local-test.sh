@@ -2,7 +2,6 @@
 #
 # executable
 #
-# apply Terraform template to deploy cosmos and app service
 
 set -e
 # Read variables in configuration file
@@ -115,7 +114,7 @@ popd > /dev/null
 ip=$(get_local_host "nginx-api")
 flask_rest_api_url="http://$ip/flask-rest-api/version"
 printMessage "Testing flask-rest-api url: $flask_rest_api_url expected version: ${APP_VERSION}"
-result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" "60")
+result=$(checkUrl "${flask_rest_api_url}" "${APP_VERSION}" 300)
 if [[ $result != "true" ]]; then
     printError "Error while testing flask-rest-api"
 else
@@ -125,7 +124,7 @@ fi
 # Test flask-rest-api
 fastapi_rest_api_url="http://$ip/fastapi-rest-api/version"
 printMessage "Testing fastapi-rest-api url: $fastapi_rest_api_url expected version: ${APP_VERSION}"
-result=$(checkUrl "${fastapi_rest_api_url}" "${APP_VERSION}" "60")
+result=$(checkUrl "${fastapi_rest_api_url}" "${APP_VERSION}" 300)
 if [[ $result != "true" ]]; then
     printError "Error while testing fastapi-rest-api"
 else

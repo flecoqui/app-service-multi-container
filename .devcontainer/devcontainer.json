@@ -1,5 +1,5 @@
 {
-  "name": "App Service Multi-Container Workspace",
+  "name": "dcworkspace",
   "dockerComposeFile": "docker-compose.yml",
   "service": "dcworkspace",
   "workspaceFolder": "/dcworkspace",
@@ -14,7 +14,6 @@
     "eamodio.gitlens",
     "DavidAnson.vscode-markdownlint",
     "ms-python.python",
-    "ms-python.vscode-pylance",
     "ms-vscode.azurecli",
     "ms-azuretools.vscode-docker",
   ],

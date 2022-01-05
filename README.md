@@ -127,6 +127,7 @@ Using the dev container shell run the following command:
 
 2. Launch the REST API from the dev container
 
+    chmod +x ./run-local.sh
     ./run-local.sh
 
 3. The REST API is now running locally, and you can check if the service is functionning opening the following url with your favorite browser.
@@ -144,6 +145,7 @@ Using the dev container shell run the following command:
 
 2. Launch the REST API from the dev container
 
+    chmod +x ./run-local.sh
     ./run-local.sh
 
 3. The REST API is now running locally, and you can check if the service is functionning opening the following url with your favorite browser.
@@ -163,6 +165,7 @@ Using the dev container shell run the following command:
 
 2. Build the local container and launch the same container hosting the REST API
 
+    chmod +x ./run-docker-local.sh
     ./run-docker-local.sh
 
 3. The REST API is now running locally in a container, and you can check if the service is functionning opening the following url with your favorite browser.
@@ -188,6 +191,7 @@ Using the dev container shell run the following command:
 
 2. Build the local container and launch the same container hosting the REST API
 
+    chmod +x ./run-docker-local.sh
     ./run-docker-local.sh
 
 3. The REST API is now running locally, and you can check if the service is functionning opening the following url with your favorite browser.
@@ -205,6 +209,7 @@ The 2 REST APIs have been tested running on a local container. We can new test t
 
 2. Run bash file local-test.sh
 
+    chmod +x ./local-test.sh
     ./local-test.sh
 
   This bash file creates nginx, fastapi and flask container images. Then it deploys all the containers.
@@ -253,6 +258,7 @@ Now you can run the script.
 
 2. Run bash file azure-test.sh
 
+    chmod +x ./azure-test.sh
     ./azure-test.sh
 
 ### Deploying the infrastructure
@@ -485,9 +491,10 @@ The authentication with Azure Container Registry will be based on login/password
         eval "$cmd"
 
         printProgress "Create Containers"
-        sed "s/{ContainerRegistryUrl}/${ContainerRegistryUrl}\//g"  < $SCRIPTS_DIRECTORY/../src/nginx/docker-compose.template.yml | sed "s/{APP_VERSION}/${APP_VERSION}/g" >  $SCRIPTS_DIRECTORY/../src/nginx/docker-compose-app-service.yml
+        tmp_dir=$(mktemp -d -t mc-XXXXXXXXXX)
+        sed "s/{ContainerRegistryUrl}/${ContainerRegistryUrl}\//g"  < $SCRIPTS_DIRECTORY/../src/nginx/docker-compose.template.yml | sed "s/{APP_VERSION}/${APP_VERSION}/g" >  $tmp_dir/docker-compose-app-service.yml
         cmd="az webapp config container set --resource-group  "$resourcegroup" --name "$webapp" \
-                --multicontainer-config-type compose --multicontainer-config-file $SCRIPTS_DIRECTORY/../src/nginx/docker-compose-app-service.yml --output none"
+                --multicontainer-config-type compose --multicontainer-config-file $tmp_dir/docker-compose-app-service.yml --output none"
         printProgress "$cmd"
         eval "$cmd"
 
